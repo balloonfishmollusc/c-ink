@@ -820,6 +820,40 @@ world
         }
 
         [Test()]
+        public void TestObjectMethodCall()
+        {
+            var story = CompileString(@"
+VAR a = 4
+{a.add(5)}
+{add(3, a.add(8))}
+{a.add(1).add(2).add(3)}
+== function add(x, y)
+~ return x + y
+");
+            Assert.AreEqual("9", story.Continue().Trim());
+            Assert.AreEqual("15", story.Continue().Trim());
+            Assert.AreEqual("10", story.Continue().Trim());
+        }
+
+        string generalExternalFunction(params object[] args)
+        {
+            return string.Join(",", args);
+        }
+
+        [Test()]
+        public void TestExternalBindingWithVariableArguments()
+        {
+            var story = CompileString(@"
+EXTERNAL array()
+{array(1,2,3,4,5,6)}
+");
+
+            story.BindExternalFunctionGeneral("array", generalExternalFunction);
+
+            Assert.AreEqual("1,2,3,4,5,6", story.Continue().Trim());
+        }
+
+        [Test()]
         public void TestExternalBinding()
         {
             var story = CompileString(@"

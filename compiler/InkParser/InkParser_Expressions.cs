@@ -188,7 +188,7 @@ namespace Ink
 
             // - Since we allow numbers at the start of variable names, variable names are checked before literals
             // - Function calls before variable names in case we see parentheses
-            var expr = OneOf (ExpressionList, ExpressionParen, ExpressionFunctionCall, ExpressionVariableName, ExpressionLiteral) as Expression;
+            var expr = OneOf (ExpressionList, ExpressionParen, ExpressionObjectMethodCall, ExpressionFunctionCall, ExpressionVariableName, ExpressionLiteral) as Expression;
 
             // Only recurse immediately if we have one of the (usually optional) unary ops
             if (expr == null && prefixOp != null) {
@@ -311,6 +311,36 @@ namespace Ink
             }
 
             return null;
+        }
+
+        private FunctionCall CascadeObjectMethodCall(VariableReference self, List<FunctionCall> cpnts, int i)
+        {
+            List<Expression> arguments = new List<Expression>();
+            if (i == 0)
+                arguments.Add(self);
+            else
+                arguments.Add(CascadeObjectMethodCall(self, cpnts, i - 1));
+            arguments.AddRange(cpnts[i].arguments);
+            return new FunctionCall(cpnts[i].functionName, arguments);
+        }
+
+        protected Expression ExpressionObjectMethodCall()
+        {
+            VariableReference self = null;
+
+            var objIden = Parse(IdentifierWithMetadata);
+            if (objIden == null) return null;
+            self = new VariableReference(new List<Identifier> { objIden });
+
+            if (self == null || ParseString(".") == null)
+                return null;
+
+            ParseRule dots = Exclude(String("."));
+            var functions = Interleave<FunctionCall>(ExpressionFunctionCall, dots);
+            if (functions == null || functions.Count == 0)
+                return null;
+
+            return CascadeObjectMethodCall(self, functions, functions.Count - 1);
         }
 
         protected Expression ExpressionFunctionCall()

@@ -19,8 +19,11 @@ namespace Ink.Parsed
 
         public bool shouldPopReturnedValue;
 
+        public Identifier functionName { get; private set; }
+
         public FunctionCall (Identifier functionName, List<Expression> arguments)
         {
+            this.functionName = functionName;
             _proxyDivert = new Parsed.Divert(new Path(functionName), arguments);
             _proxyDivert.isFunctionCall = true;
             AddContent (_proxyDivert);

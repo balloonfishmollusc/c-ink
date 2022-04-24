@@ -370,9 +370,9 @@ namespace Ink.Parsed
                 ownArgCount = arguments.Count;
             }
 
-            if (ownArgCount != externalArgCount) {
-                Error ("incorrect number of arguments sent to external function '" + externalName + "'. Expected " + externalArgCount + " but got " + ownArgCount);
-            }
+            //if (ownArgCount != externalArgCount) {
+            //    Error ("incorrect number of arguments sent to external function '" + externalName + "'. Expected " + externalArgCount + " but got " + ownArgCount);
+            //}
         }
 
         public override void Error (string message, Object source = null, bool isWarning = false)
