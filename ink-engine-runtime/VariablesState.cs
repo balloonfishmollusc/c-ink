@@ -109,11 +109,10 @@ namespace Ink.Runtime
 			return _globalVariables.Keys.GetEnumerator();
 		}
 
-        public VariablesState (CallStack callStack, ListDefinitionsOrigin listDefsOrigin)
+        public VariablesState (CallStack callStack)
         {
             _globalVariables = new Dictionary<string, Object> ();
             _callStack = callStack;
-            _listDefsOrigin = listDefsOrigin;
         }
 
         public void ApplyPatch()
@@ -263,10 +262,6 @@ namespace Ink.Runtime
                 if( _defaultGlobalVariables != null && _defaultGlobalVariables.TryGetValue(name, out varValue) ) {
                     return varValue;
                 }
-
-                var listItemValue = _listDefsOrigin.FindSingleItemListWithName (name);
-                if (listItemValue)
-                    return listItemValue;
             } 
 
             // Temporary
@@ -334,10 +329,6 @@ namespace Ink.Runtime
 
         void RetainListOriginsForAssignment (Runtime.Object oldValue, Runtime.Object newValue)
         {
-            var oldList = oldValue as ListValue;
-            var newList = newValue as ListValue;
-            if (oldList && newList && newList.value.Count == 0)
-                newList.value.SetInitialOriginNames (oldList.value.originNames);
         }
 
         public void SetGlobal(string variableName, Runtime.Object value)
@@ -345,8 +336,6 @@ namespace Ink.Runtime
             Runtime.Object oldValue = null;
             if( patch == null || !patch.TryGetGlobal(variableName, out oldValue) )
                 _globalVariables.TryGetValue (variableName, out oldValue);
-
-            ListValue.RetainListOriginsForAssignment (oldValue, value);
 
             if (patch != null)
                 patch.SetGlobal(variableName, value);
@@ -411,7 +400,6 @@ namespace Ink.Runtime
         // Used for accessing temporary variables
         CallStack _callStack;
         HashSet<string> _changedVariablesForBatchObs;
-        ListDefinitionsOrigin _listDefsOrigin;
     }
 }
 

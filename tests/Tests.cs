@@ -2836,142 +2836,6 @@ Now in B.
         }
 
         [Test ()]
-        public void TestListBasicOperations ()
-        {
-            var storyStr =
-                @"
-LIST list = a, (b), c, (d), e
-{list}
-{(a, c) + (b, e)}
-{(a, b, c) ^ (c, b, e)}
-{list ? (b, d, e)}
-{list ? (d, b)}
-{list !? (c)}
-";
-            var story = CompileString (storyStr);
-
-            Assert.AreEqual ("b, d\na, b, c, e\nb, c\nfalse\ntrue\ntrue\n", story.ContinueMaximally ());
-        }
-
-
-        [Test ()]
-        public void TestListMixedItems ()
-        {
-            var storyStr =
-                @"
-LIST list = (a), b, (c), d, e
-LIST list2 = x, (y), z
-{list + list2}
-";
-            var story = CompileString (storyStr);
-
-            Assert.AreEqual ("a, y, c\n", story.ContinueMaximally ());
-        }
-
-
-        [Test ()]
-        public void TestMoreListOperations ()
-        {
-            var storyStr =
-                @"
-LIST list = l, m = 5, n
-{LIST_VALUE(l)}
-
-{list(1)}
-
-~ temp t = list()
-~ t += n
-{t}
-~ t = LIST_ALL(t)
-~ t -= n
-{t}
-~ t = LIST_INVERT(t)
-{t}
-";
-            var story = CompileString (storyStr);
-
-            Assert.AreEqual ("1\nl\nn\nl, m\nn\n", story.ContinueMaximally ());
-        }
-
-        [Test ()]
-        public void TestEmptyListOrigin ()
-        {
-            var storyStr =
-                @"
-LIST list = a, b
-{LIST_ALL(list)}
-
-";
-            var story = CompileString (storyStr);
-
-            Assert.AreEqual ("a, b\n", story.ContinueMaximally ());
-        }
-
-
-                [Test ()]
-        public void TestContainsEmptyListAlwaysFalse ()
-        {
-            var storyStr =
-                @"
-LIST list = (a), b
-{list ? ()}
-{() ? ()}
-{() ? list}
-";
-            var story = CompileString (storyStr);
-
-            Assert.AreEqual ("false\nfalse\nfalse\n", story.ContinueMaximally ());
-        }
-
-
-        [Test ()]
-        public void TestEmptyListOriginAfterAssignment ()
-        {
-            var storyStr =
-                @"
-LIST x = a, b, c
-~ x = ()
-{LIST_ALL(x)}
-";
-            var story = CompileString (storyStr);
-
-            Assert.AreEqual ("a, b, c\n", story.ContinueMaximally ());
-        }
-
-        [Test ()]
-        public void TestListSaveLoad ()
-        {
-            var storyStr =
-                @"
-LIST l1 = (a), b, (c)
-LIST l2 = (x), y, z
-
-VAR t = ()
-~ t = l1 + l2
-{t}
-
-== elsewhere ==
-~ t += z
-{t}
--> END
-";
-            var story = CompileString (storyStr);
-
-            Assert.AreEqual ("a, x, c\n", story.ContinueMaximally ());
-
-            var savedState = story.state.ToJson ();
-
-            // Compile new version of the story
-            story = CompileString (storyStr);
-
-            // Load saved game
-            story.state.LoadJson (savedState);
-
-            story.ChoosePathString ("elsewhere");
-            Assert.AreEqual ("a, x, c, z\n", story.ContinueMaximally ());
-        }
-
-        [Test ()]
         public void TestEmptyThreadError ()
         {
             CompileStringWithoutRuntime ("<-", testingErrors:true);
@@ -3060,24 +2924,6 @@ opts1
             CompileString (storyStr, countAllVisits: false, testingErrors:true);
 
             Assert.IsTrue(HadError ("with the same label"));
-        }
-
-        [Test ()]
-        public void TestVariableNamingCollisionWithFlow ()
-        {
-            var storyStr =
-                @"
-LIST someList = A, B
-
-~temp heldItems = (A) 
-{LIST_COUNT (heldItems)}
-
-=== function heldItems ()
-~ return (A)
-        ";
-            CompileString (storyStr, countAllVisits: false, testingErrors: true);
-
-            Assert.IsTrue (HadError ("name has already been used for a function"));
         }
 
         [Test ()]
@@ -3537,34 +3383,6 @@ world
             Assert.AreEqual ("hello\nworld\n", story.ContinueMaximally ());
         }
 
-
-        [Test ()]
-        public void TestListRandom ()
-        {
-            var storyStr =
-                @"
-LIST l = A, (B), (C), (D), E
-{LIST_RANDOM(l)}
-{LIST_RANDOM (l)}
-{LIST_RANDOM (l)}
-{LIST_RANDOM (l)}
-{LIST_RANDOM (l)}
-{LIST_RANDOM (l)}
-{LIST_RANDOM (l)}
-{LIST_RANDOM (l)}
-{LIST_RANDOM (l)}
-{LIST_RANDOM (l)}
-                    ";
-
-            var story = CompileString (storyStr);
-
-            while (story.canContinue) {
-                var result = story.Continue ();
-                Assert.IsTrue (result == "B\n" || result == "C\n" || result == "D\n");
-            }
-        }
-
-
         [Test ()]
         public void TestTurns ()
         {
@@ -3629,33 +3447,6 @@ text 2
             Assert.AreEqual("1\n1\n2\n0.6666667\n0\n1\n", story.ContinueMaximally());
         }
 
-        [Test()]
-        public void TestListRange()
-        {
-            var storyStr =
-        @"
-LIST Food = Pizza, Pasta, Curry, Paella
-LIST Currency = Pound, Euro, Dollar
-LIST Numbers = One, Two, Three, Four, Five, Six, Seven
-
-VAR all = ()
-~ all = LIST_ALL(Food) + LIST_ALL(Currency)
-{all}
-{LIST_RANGE(all, 2, 3)}
-{LIST_RANGE(LIST_ALL(Numbers), Two, Six)}
-{LIST_RANGE((Pizza, Pasta), -1, 100)} // allow out of range
-";
-
-            var story = CompileString(storyStr);
-
-            Assert.AreEqual(
-@"Pound, Pizza, Euro, Pasta, Dollar, Curry, Paella
-Euro, Pasta, Dollar, Curry
-Two, Three, Four, Five, Six
-Pizza, Pasta
-".Replace(Environment.NewLine, "\n"), story.ContinueMaximally());
-        }
-           
         // Fix for rogue "can't use as sub-expression" bug
         [Test()]
         public void TestUsingFunctionAndIncrementTogether()
@@ -3878,12 +3669,6 @@ Text.
             Assert.AreEqual("false\n", CompileString("{not 1}").Continue());
             Assert.AreEqual("false\n", CompileString("{not true}").Continue());
             Assert.AreEqual("true\n", CompileString("{3 > 1}").Continue());
-
-            var listHasntStory = @"
-                LIST list = a, (b), c, (d), e
-                {list !? (c)}
-            ";
-            Assert.AreEqual("true\n", CompileString(listHasntStory).Continue());
         }
 
 

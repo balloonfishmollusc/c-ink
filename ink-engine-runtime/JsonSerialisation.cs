@@ -145,13 +145,6 @@ namespace Ink.Runtime
                 return;
             }
 
-            var listVal = obj as ListValue;
-            if (listVal)
-            {
-                WriteInkList(writer, listVal);
-                return;
-            }
-
             var divTargetVal = obj as DivertTargetValue;
             if (divTargetVal)
             {
@@ -481,22 +474,6 @@ namespace Ink.Runtime
                     return new Runtime.Tag ((string)propValue);
                 }
 
-                // List value
-                if (obj.TryGetValue ("list", out propValue)) {
-                    var listContent = (Dictionary<string, object>)propValue;
-                    var rawList = new InkList ();
-                    if (obj.TryGetValue ("origins", out propValue)) {
-                        var namesAsObjs = (List<object>)propValue;
-                        rawList.SetInitialOriginNames (namesAsObjs.Cast<string>().ToList());
-                    }
-                    foreach (var nameToVal in listContent) {
-                        var item = new InkListItem (nameToVal.Key);
-                        var val = (int)nameToVal.Value;
-                        rawList.Add (item, val);
-                    }
-                    return new ListValue (rawList);
-                }
-
                 // Used when serialising save state only
                 if (obj ["originalChoicePath"] != null)
                     return JObjectToChoice (obj);
@@ -613,71 +590,6 @@ namespace Ink.Runtime
             writer.WriteObjectEnd();
         }
 
-        static void WriteInkList(SimpleJson.Writer writer, ListValue listVal)
-        {
-            var rawList = listVal.value;
-
-            writer.WriteObjectStart();
-
-            writer.WritePropertyStart("list");
-
-            writer.WriteObjectStart();
-
-            foreach (var itemAndValue in rawList)
-            {
-                var item = itemAndValue.Key;
-                int itemVal = itemAndValue.Value;
-
-                writer.WritePropertyNameStart();
-                writer.WritePropertyNameInner(item.originName ?? "?");
-                writer.WritePropertyNameInner(".");
-                writer.WritePropertyNameInner(item.itemName);
-                writer.WritePropertyNameEnd();
-
-                writer.Write(itemVal);
-
-                writer.WritePropertyEnd();
-            }
-
-            writer.WriteObjectEnd();
-
-            writer.WritePropertyEnd();
-
-            if (rawList.Count == 0 && rawList.originNames != null && rawList.originNames.Count > 0)
-            {
-                writer.WritePropertyStart("origins");
-                writer.WriteArrayStart();
-                foreach (var name in rawList.originNames)
-                    writer.Write(name);
-                writer.WriteArrayEnd();
-                writer.WritePropertyEnd();
-            }
-
-            writer.WriteObjectEnd();
-        }
-
-        public static ListDefinitionsOrigin JTokenToListDefinitions (object obj)
-        {
-            var defsObj = (Dictionary<string, object>)obj;
-
-            var allDefs = new List<ListDefinition> ();
-
-            foreach (var kv in defsObj) {
-                var name = (string) kv.Key;
-                var listDefJson = (Dictionary<string, object>)kv.Value;
-
-                // Cast (string, object) to (string, int) for items
-                var items = new Dictionary<string, int> ();
-                foreach (var nameValue in listDefJson)
-                    items.Add(nameValue.Key, (int)nameValue.Value);
-
-                var def = new ListDefinition (name, items);
-                allDefs.Add (def);
-            }
-
-            return new ListDefinitionsOrigin (allDefs);
-        }
-
         static Json() 
         {
             _controlCommandNames = new string[(int)ControlCommand.CommandType.TOTAL_VALUES];
@@ -703,9 +615,9 @@ namespace Ink.Runtime
             _controlCommandNames [(int)ControlCommand.CommandType.StartThread] = "thread";
             _controlCommandNames [(int)ControlCommand.CommandType.Done] = "done";
             _controlCommandNames [(int)ControlCommand.CommandType.End] = "end";
-            _controlCommandNames [(int)ControlCommand.CommandType.ListFromInt] = "listInt";
-            _controlCommandNames [(int)ControlCommand.CommandType.ListRange] = "range";
-            _controlCommandNames [(int)ControlCommand.CommandType.ListRandom] = "lrnd";
+            //_controlCommandNames [(int)ControlCommand.CommandType.ListFromInt] = "listInt";
+            //_controlCommandNames [(int)ControlCommand.CommandType.ListRange] = "range";
+            //_controlCommandNames [(int)ControlCommand.CommandType.ListRandom] = "lrnd";
 
             for (int i = 0; i < (int)ControlCommand.CommandType.TOTAL_VALUES; ++i) {
                 if (_controlCommandNames [i] == null)

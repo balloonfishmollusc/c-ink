@@ -74,11 +74,6 @@ namespace Ink.Parsed
                     listName = path [0];
                     listItemName = path [1];
                 }
-
-                var listItem = story.ResolveListItem (listName, listItemName, this);
-                if (listItem) {
-                    isListItemReference = true;
-                }
             }
 
             container.AddContent (_runtimeVarRef);

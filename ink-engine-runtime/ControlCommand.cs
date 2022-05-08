@@ -28,9 +28,6 @@ namespace Ink.Runtime
             StartThread,
             Done,
             End,
-            ListFromInt,
-            ListRange,
-            ListRandom,
             //----
             TOTAL_VALUES
         }
@@ -145,20 +142,6 @@ namespace Ink.Runtime
 
         public static ControlCommand End() {
             return new ControlCommand (CommandType.End);
-        }
-
-        public static ControlCommand ListFromInt () {
-            return new ControlCommand (CommandType.ListFromInt);
-        }
-
-        public static ControlCommand ListRange ()
-        {
-            return new ControlCommand (CommandType.ListRange);
-        }
-
-        public static ControlCommand ListRandom ()
-        {
-            return new ControlCommand (CommandType.ListRandom);
         }
 
         public override string ToString ()

@@ -124,12 +124,6 @@ namespace Ink.Runtime
         /// </summary>
         public VariablesState variablesState{ get { return state.variablesState; } }
 
-        public ListDefinitionsOrigin listDefinitions {
-            get {
-                return _listDefinitions;
-            }
-        }
-
         /// <summary>
         /// The entire current state of the story including (but not limited to):
         /// 
@@ -194,13 +188,9 @@ namespace Ink.Runtime
         // Warning: When creating a Story using this constructor, you need to
         // call ResetState on it before use. Intended for compiler use only.
         // For normal use, use the constructor that takes a json string.
-        public Story (Container contentContainer, List<Runtime.ListDefinition> lists = null)
+        public Story (Container contentContainer)
 		{
 			_mainContentContainer = contentContainer;
-
-            if (lists != null)
-                _listDefinitions = new ListDefinitionsOrigin (lists);
-
             _externals = new Dictionary<string, ExternalFunctionDef> ();
 		}
 
@@ -227,11 +217,6 @@ namespace Ink.Runtime
             var rootToken = rootObject ["root"];
             if (rootToken == null)
                 throw new System.Exception ("Root node for ink not found. Are you sure it's a valid .ink.json file?");
-
-            object listDefsObj;
-            if (rootObject.TryGetValue ("listDefs", out listDefsObj)) {
-                _listDefinitions = Json.JTokenToListDefinitions (listDefsObj);
-            }
 
             _mainContentContainer = Json.JTokenToRuntimeObject (rootToken) as Container;
 
@@ -266,32 +251,6 @@ namespace Ink.Runtime
 
             // Main container content
             writer.WriteProperty("root", w => Json.WriteRuntimeContainer(w, _mainContentContainer));
-
-            // List definitions
-            if (_listDefinitions != null) {
-
-                writer.WritePropertyStart("listDefs");
-                writer.WriteObjectStart();
-
-                foreach (ListDefinition def in _listDefinitions.lists)
-                {
-                    writer.WritePropertyStart(def.name);
-                    writer.WriteObjectStart();
-
-                    foreach (var itemToVal in def.items)
-                    {
-                        InkListItem item = itemToVal.Key;
-                        int val = itemToVal.Value;
-                        writer.WriteProperty(item.itemName, val);
-                    }
-
-                    writer.WriteObjectEnd();
-                    writer.WritePropertyEnd();
-                }
-
-                writer.WriteObjectEnd();
-                writer.WritePropertyEnd();
-            }
 
             writer.WriteObjectEnd();
         }
@@ -1441,90 +1400,6 @@ namespace Ink.Runtime
                 case ControlCommand.CommandType.End:
                     state.ForceEnd ();
                     break;
-
-                case ControlCommand.CommandType.ListFromInt:
-                    var intVal = state.PopEvaluationStack () as IntValue;
-                    var listNameVal = state.PopEvaluationStack () as StringValue;
-
-					if (intVal == null) { 
-						throw new StoryException ("Passed non-integer when creating a list element from a numerical value."); 
-					}
-
-                    ListValue generatedListValue = null;
-
-                    ListDefinition foundListDef;
-                    if (listDefinitions.TryListGetDefinition (listNameVal.value, out foundListDef)) {
-                        InkListItem foundItem;
-                        if (foundListDef.TryGetItemWithValue (intVal.value, out foundItem)) {
-                            generatedListValue = new ListValue (foundItem, intVal.value);
-                        }
-                    } else {
-                        throw new StoryException ("Failed to find LIST called " + listNameVal.value);
-                    }
-
-                    if (generatedListValue == null)
-                        generatedListValue = new ListValue ();
-
-                    state.PushEvaluationStack (generatedListValue);
-                    break;
-
-                case ControlCommand.CommandType.ListRange: {
-                        var max = state.PopEvaluationStack () as Value;
-                        var min = state.PopEvaluationStack () as Value;
-
-                        var targetList = state.PopEvaluationStack () as ListValue;
-
-                        if (targetList == null || min == null || max == null)
-                            throw new StoryException ("Expected list, minimum and maximum for LIST_RANGE");
-
-                        var result = targetList.value.ListWithSubRange(min.valueObject, max.valueObject);
-
-                        state.PushEvaluationStack (new ListValue(result));
-                        break;
-                    }
-
-                case ControlCommand.CommandType.ListRandom: {
-
-                        var listVal = state.PopEvaluationStack () as ListValue;
-                        if (listVal == null)
-                            throw new StoryException ("Expected list for LIST_RANDOM");
-                        
-                        var list = listVal.value;
-
-                        InkList newList = null;
-
-                        // List was empty: return empty list
-                        if (list.Count == 0) {
-                            newList = new InkList ();
-                        } 
-
-                        // Non-empty source list
-                        else {
-                            // Generate a random index for the element to take
-                            var resultSeed = state.storySeed + state.previousRandom;
-                            var random = new Random (resultSeed);
-
-                            var nextRandom = random.Next ();
-                            var listItemIndex = nextRandom % list.Count;
-
-                            // Iterate through to get the random element
-                            var listEnumerator = list.GetEnumerator ();
-                            for (int i = 0; i <= listItemIndex; i++) {
-                                listEnumerator.MoveNext ();
-                            }
-                            var randomItem = listEnumerator.Current;
-
-                            // Origin list is simply the origin of the one element
-                            newList = new InkList (randomItem.Key.originName, this);
-                            newList.Add (randomItem.Key, randomItem.Value);
-
-                            state.previousRandom = nextRandom;
-                        }
-
-                        state.PushEvaluationStack (new ListValue(newList));
-                        break;
-                    }
-
                 default:
                     Error ("unhandled ControlCommand: " + evalCommand);
                     break;
@@ -2746,7 +2621,6 @@ namespace Ink.Runtime
         }
 
         Container _mainContentContainer;
-        ListDefinitionsOrigin _listDefinitions;
 
         struct ExternalFunctionDef {
             public ExternalFunction function;

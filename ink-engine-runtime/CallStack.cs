@@ -368,9 +368,10 @@ namespace Ink.Runtime
             }
 
             Runtime.Object oldValue;
-            if( contextElement.temporaryVariables.TryGetValue(name, out oldValue) )
-                ListValue.RetainListOriginsForAssignment (oldValue, value);
-
+            if( contextElement.temporaryVariables.TryGetValue(name, out oldValue))
+            {
+                //ListValue.RetainListOriginsForAssignment(oldValue, value);
+            }
             contextElement.temporaryVariables [name] = value;
         }
 

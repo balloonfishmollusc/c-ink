@@ -401,7 +401,7 @@ namespace Ink.Runtime
 
             evaluationStack = new List<Runtime.Object> ();
 
-            variablesState = new VariablesState (callStack, story.listDefinitions);
+            variablesState = new VariablesState (callStack);
 
             _visitCounts = new Dictionary<string, int> ();
             _turnIndices = new Dictionary<string, int> ();
@@ -1045,28 +1045,6 @@ namespace Ink.Runtime
 
         public void PushEvaluationStack(Runtime.Object obj)
         {
-            // Include metadata about the origin List for list values when
-            // they're used, so that lower level functions can make use
-            // of the origin list to get related items, or make comparisons
-            // with the integer values etc.
-            var listValue = obj as ListValue;
-            if (listValue) {
-                
-                // Update origin when list is has something to indicate the list origin
-                var rawList = listValue.value;
-				if (rawList.originNames != null) {
-					if( rawList.origins == null ) rawList.origins = new List<ListDefinition>();
-					rawList.origins.Clear();
-
-					foreach (var n in rawList.originNames) {
-                        ListDefinition def = null;
-                        story.listDefinitions.TryListGetDefinition (n, out def);
-						if( !rawList.origins.Contains(def) )
-							rawList.origins.Add (def);
-                    }
-                }
-            }
-
             evaluationStack.Add(obj);
         }
 
@@ -1184,7 +1162,7 @@ namespace Ink.Runtime
             // Pass arguments onto the evaluation stack
             if (arguments != null) {
                 for (int i = 0; i < arguments.Length; i++) {
-                    if (!(arguments [i] is int || arguments [i] is float || arguments [i] is string || arguments [i] is bool || arguments [i] is InkList)) {
+                    if (!(arguments [i] is int || arguments [i] is float || arguments [i] is string || arguments [i] is bool)) {
                         throw new System.ArgumentException ("ink arguments when calling EvaluateFunction / ChoosePathStringWithParameters must be int, float, string, bool or InkList. Argument was "+(arguments [i] == null ? "null" : arguments [i].GetType().Name));
                     }
 

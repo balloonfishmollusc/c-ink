@@ -13,8 +13,6 @@ namespace Ink.Parsed
         public bool isTurnsSince { get { return name == "TURNS_SINCE"; } }
         public bool isRandom { get { return name == "RANDOM"; } }
         public bool isSeedRandom { get { return name == "SEED_RANDOM"; } }
-        public bool isListRange { get { return name == "LIST_RANGE"; } }
-        public bool isListRandom { get { return name == "LIST_RANDOM"; } }
         public bool isReadCount { get { return name == "READ_COUNT"; } }
 
         public bool shouldPopReturnedValue;
@@ -31,8 +29,6 @@ namespace Ink.Parsed
 
         public override void GenerateIntoContainer (Runtime.Container container)
         {
-            var foundList = story.ResolveList (name);
-
             bool usingProxyDivert = false;
 
             if (isChoiceCount) {
@@ -108,22 +104,9 @@ namespace Ink.Parsed
 
                 container.AddContent (Runtime.ControlCommand.SeedRandom ());
 
-            } else if (isListRange) {
-                if (arguments.Count != 3)
-                    Error ("LIST_RANGE should take 3 parameters - a list, a min and a max");
+            } else if (false) {
 
-                for (int arg = 0; arg < arguments.Count; arg++)
-                    arguments [arg].GenerateIntoContainer (container);
-
-                container.AddContent (Runtime.ControlCommand.ListRange ());
-
-            } else if( isListRandom ) {
-                if (arguments.Count != 1)
-                    Error ("LIST_RANDOM should take 1 parameter - a list");
-
-                arguments [0].GenerateIntoContainer (container);
-
-                container.AddContent (Runtime.ControlCommand.ListRandom ());
+            } else if( false ) {
 
             } else if (Runtime.NativeFunctionCall.CallExistsWithName (name)) {
 
@@ -140,23 +123,7 @@ namespace Ink.Parsed
                     arguments [arg].GenerateIntoContainer (container);
 
                 container.AddContent (Runtime.NativeFunctionCall.CallWithName (name));
-            } else if (foundList != null) {
-                if (arguments.Count > 1)
-                    Error ("Can currently only construct a list from one integer (or an empty list from a given list definition)");
-
-                // List item from given int
-                if (arguments.Count == 1) {
-                    container.AddContent (new Runtime.StringValue (name));
-                    arguments [0].GenerateIntoContainer (container);
-                    container.AddContent (Runtime.ControlCommand.ListFromInt ());
-                }
-
-                // Empty list with given origin.
-                else {
-                    var list = new Runtime.InkList ();
-                    list.SetInitialOriginName (name);
-                    container.AddContent (new Runtime.ListValue (list));
-                }
+            } else if (false) {
             }
 
             // Normal function call
@@ -226,8 +193,6 @@ namespace Ink.Parsed
                 || name == "TURNS"
                 || name == "RANDOM"
                 || name == "SEED_RANDOM"
-                || name == "LIST_VALUE"
-                || name == "LIST_RANDOM"
                 || name == "READ_COUNT";
         }
 

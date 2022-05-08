@@ -10,8 +10,6 @@ namespace Ink.Parsed
         }
         public Identifier variableIdentifier { get; protected set; }
         public Expression expression { get; protected set; }
-        public ListDefinition listDefinition { get; protected set; }
-
         public bool isGlobalDeclaration { get; set; }
         public bool isNewTemporaryDeclaration { get; set; }
 
@@ -30,15 +28,9 @@ namespace Ink.Parsed
                 this.expression = AddContent(assignedExpression);
         }
 
-        public VariableAssignment (Identifier identifier, ListDefinition listDef)
+        public VariableAssignment (Identifier identifier)
         {
             this.variableIdentifier = identifier;
-
-            if (listDef) {
-                this.listDefinition = AddContent (listDef);
-                this.listDefinition.variableAssignment = this;
-            }
-
             // List definitions are always global
             isGlobalDeclaration = true;
         }
@@ -66,8 +58,6 @@ namespace Ink.Parsed
             // The expression's runtimeObject is actually another nested container
             if( expression != null )
                 container.AddContent (expression.runtimeObject);
-            else if( listDefinition != null )
-                container.AddContent (listDefinition.runtimeObject);
 
             _runtimeAssignment = new Runtime.VariableAssignment(variableName, isNewTemporaryDeclaration);
             container.AddContent (_runtimeAssignment);
@@ -80,7 +70,7 @@ namespace Ink.Parsed
             base.ResolveReferences (context);
 
             // List definitions are checked for conflicts separately
-            if( this.isDeclaration && listDefinition == null )
+            if( this.isDeclaration )
                 context.CheckForNamingCollisions (this, variableIdentifier, this.isGlobalDeclaration ? Story.SymbolType.Var : Story.SymbolType.Temp);
 
             // Initial VAR x = [intialValue] declaration, not re-assignment

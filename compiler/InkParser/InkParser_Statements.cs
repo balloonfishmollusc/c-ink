@@ -95,7 +95,6 @@ namespace Ink
                 }
 
                 // Global variable declarations can go anywhere
-                rulesAtLevel.Add(Line(ListDeclaration));
                 rulesAtLevel.Add(Line(VariableDeclaration));
                 rulesAtLevel.Add(Line(ConstDeclaration));
                 rulesAtLevel.Add(Line(ExternalDeclaration));
