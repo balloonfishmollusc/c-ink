@@ -172,6 +172,8 @@ namespace Ink.Runtime
         /// Return a Profiler instance that you can request a report from when you're finished.
         /// </summary>
 		public Profiler StartProfiling() {
+            throw new NotImplementedException();
+
             IfAsyncWeCant ("start profiling");
 			_profiler = new Profiler();
 			return _profiler;
@@ -182,6 +184,8 @@ namespace Ink.Runtime
         /// To generate a report from the profiler, call 
         /// </summary>
 		public void EndProfiling() {
+            throw new NotImplementedException();
+
 			_profiler = null;
 		}
             

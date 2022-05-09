@@ -143,18 +143,6 @@ namespace Ink.Runtime
             }
         }
 
-        /// <summary>
-        /// When saving out JSON state, we can skip saving global values that
-        /// remain equal to the initial values that were declared in ink.
-        /// This makes the save file (potentially) much smaller assuming that
-        /// at least a portion of the globals haven't changed. However, it
-        /// can also take marginally longer to save in the case that the 
-        /// majority HAVE changed, since it has to compare all globals.
-        /// It may also be useful to turn this off for testing worst case
-        /// save timing.
-        /// </summary>
-        public static bool dontSaveDefaultValues = true;
-
         public void WriteJson(SimpleJson.Writer writer)
         {
             writer.WriteObjectStart();
@@ -162,18 +150,6 @@ namespace Ink.Runtime
             {
                 var name = keyVal.Key;
                 var val = keyVal.Value;
-
-                if(dontSaveDefaultValues) {
-                    // Don't write out values that are the same as the default global values
-                    Runtime.Object defaultVal;
-                    if (_defaultGlobalVariables.TryGetValue(name, out defaultVal))
-                    {
-                        if (RuntimeObjectsEqual(val, defaultVal))
-                            continue;
-                    }
-                }
-
-
                 writer.WritePropertyStart(name);
                 Json.WriteRuntimeObject(writer, val);
                 writer.WritePropertyEnd();
@@ -325,10 +301,6 @@ namespace Ink.Runtime
         public void SnapshotDefaultGlobals ()
         {
             _defaultGlobalVariables = new Dictionary<string, Object> (_globalVariables);
-        }
-
-        void RetainListOriginsForAssignment (Runtime.Object oldValue, Runtime.Object newValue)
-        {
         }
 
         public void SetGlobal(string variableName, Runtime.Object value)
