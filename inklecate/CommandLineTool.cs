@@ -118,25 +118,21 @@ namespace Ink
                     var stats = Ink.Stats.Generate(compiler.parsedStory);
 
                     if( opts.jsonOutput ) {
-                        var writer = new Runtime.SimpleJson.Writer();
-
-                        writer.WriteObjectStart();
-                        writer.WritePropertyStart("stats");
-
-                        writer.WriteObjectStart();
-                        writer.WriteProperty("words", stats.words);
-                        writer.WriteProperty("knots", stats.knots);
-                        writer.WriteProperty("stitches", stats.stitches);
-                        writer.WriteProperty("functions", stats.functions);
-                        writer.WriteProperty("choices", stats.choices);
-                        writer.WriteProperty("gathers", stats.gathers);
-                        writer.WriteProperty("diverts", stats.diverts);
-                        writer.WriteObjectEnd();
-
-                        writer.WritePropertyEnd();
-                        writer.WriteObjectEnd();
-
-                        Console.WriteLine(writer.ToString());
+                        var dict = new Dictionary<string, object>()
+                        {
+                            ["stats"] = new Dictionary<string, object>()
+                            {
+                                ["words"] = stats.words,
+                                ["knots"] = stats.knots,
+                                ["stitches"] = stats.stitches,
+                                ["functions"] = stats.functions,
+                                ["choices"] = stats.choices,
+                                ["gathers"] = stats.gathers,
+                                ["diverts"] = stats.diverts,
+                            }
+                        };
+  
+                        Console.WriteLine(Runtime.SimpleJson.Serialize(dict));
                     } else {
                         Console.WriteLine("Words: "+stats.words);
                         Console.WriteLine("Knots: "+stats.knots);
@@ -179,7 +175,7 @@ namespace Ink
 
 			// Play mode
             if (opts.playMode) {
-
+                /*
                 _playing = true;
 
                 // Always allow ink external fallbacks
@@ -206,7 +202,7 @@ namespace Ink
                         storyPath = path.ToString ();
                     }
                     throw new System.Exception(e.Message + " (Internal story path: " + storyPath + ")", e);
-                }
+                }*/
             }
 
             // Compile mode
@@ -265,24 +261,20 @@ namespace Ink
         {
             // { "issues": ["ERROR: blah", "WARNING: blah"] }
             if( opts.jsonOutput ) {
-                var writer = new Runtime.SimpleJson.Writer();
+                var dict = new Dictionary<string, object>();
+                var issues = new List<object>();
+                dict["issues"] = issues;
 
-                writer.WriteObjectStart();
-                writer.WritePropertyStart("issues");
-                writer.WriteArrayStart();
                 foreach (string msg in _authorMessages) {
-                    writer.Write(msg);
+                    issues.Add(msg);
                 }
                 foreach (string msg in _warnings) {
-                    writer.Write(msg);
+                    issues.Add(msg);
                 }
                 foreach (string msg in _errors) {
-                    writer.Write(msg);
+                    issues.Add(msg);
                 }
-                writer.WriteArrayEnd();
-                writer.WritePropertyEnd();
-                writer.WriteObjectEnd();
-                Console.Write (writer.ToString());
+                Console.Write (Runtime.SimpleJson.Serialize(dict));
             }
 
             // Human consumption

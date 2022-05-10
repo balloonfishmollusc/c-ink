@@ -28,42 +28,36 @@ namespace Ink.Runtime
             return JArrayToRuntimeObjList<Runtime.Object> (jArray, skipLast);
         }
 
-        public static void WriteDictionaryRuntimeObjs(SimpleJson.Writer writer, Dictionary<string, Runtime.Object> dictionary) 
+        public static object WriteDictionaryRuntimeObjs(Dictionary<string, Runtime.Object> dictionary) 
         {
-            writer.WriteObjectStart();
+            var dict = new Dictionary<string, object> ();
             foreach(var keyVal in dictionary) {
-                writer.WritePropertyStart(keyVal.Key);
-                WriteRuntimeObject(writer, keyVal.Value);
-                writer.WritePropertyEnd();
+                dict[keyVal.Key] = WriteRuntimeObject(keyVal.Value);
             }
-            writer.WriteObjectEnd();
+            return dict;
         }
 
 
-        public static void WriteListRuntimeObjs(SimpleJson.Writer writer, List<Runtime.Object> list)
+        public static object WriteListRuntimeObjs(List<Runtime.Object> list)
         {
-            writer.WriteArrayStart();
+            List<object> ret = new List<object> ();
             foreach (var val in list)
             {
-                WriteRuntimeObject(writer, val);
+                ret.Add(WriteRuntimeObject(val));
             }
-            writer.WriteArrayEnd();
+            return ret;
         }
 
-        public static void WriteIntDictionary(SimpleJson.Writer writer, Dictionary<string, int> dict)
+        public static object WriteIntDictionary(Dictionary<string, int> dict)
         {
-            writer.WriteObjectStart();
-            foreach (var keyVal in dict)
-                writer.WriteProperty(keyVal.Key, keyVal.Value);
-            writer.WriteObjectEnd();
+            return dict;
         }
 
-        public static void WriteRuntimeObject(SimpleJson.Writer writer, Runtime.Object obj)
+        public static object WriteRuntimeObject(Runtime.Object obj)
         {
             var container = obj as Container;
             if (container) {
-                WriteRuntimeContainer(writer, container);
-                return;
+                return WriteRuntimeContainer(container);
             }
 
             var divert = obj as Divert;
@@ -86,95 +80,82 @@ namespace Ink.Runtime
                 else
                     targetStr = divert.targetPathString;
 
-                writer.WriteObjectStart();
-
-                writer.WriteProperty(divTypeKey, targetStr);
+                var dict = new Dictionary<string, object>();
+                dict[divTypeKey] = targetStr;
 
                 if (divert.hasVariableTarget)
-                    writer.WriteProperty("var", true);
+                    dict["var"] = true;
 
                 if (divert.isConditional)
-                    writer.WriteProperty("c", true);
+                    dict["c"] = true;
 
                 if (divert.externalArgs > 0)
-                    writer.WriteProperty("exArgs", divert.externalArgs);
+                    dict["exArgs"] = divert.externalArgs;
 
-                writer.WriteObjectEnd();
-                return;
+                return dict;
             }
 
             var choicePoint = obj as ChoicePoint;
             if (choicePoint)
             {
-                writer.WriteObjectStart();
-                writer.WriteProperty("*", choicePoint.pathStringOnChoice);
-                writer.WriteProperty("flg", choicePoint.flags);
-                writer.WriteObjectEnd();
-                return;
+                var dict = new Dictionary<string, object>();
+                dict["*"] = choicePoint.pathStringOnChoice;
+                dict["flg"] = choicePoint.flags;
+                return dict;
             }
 
             var boolVal = obj as BoolValue;
             if (boolVal) {
-                writer.Write(boolVal.value);
-                return;
+                return boolVal.value;
             }
 
             var intVal = obj as IntValue;
             if (intVal) {
-                writer.Write(intVal.value);
-                return;
+                return intVal.value;
             }
 
             var floatVal = obj as FloatValue;
             if (floatVal) {
-                writer.Write(floatVal.value);
-                return;
+                return floatVal.value;
             }
 
             var strVal = obj as StringValue;
             if (strVal)
             {
                 if (strVal.isNewline)
-                    writer.Write("\\n", escape:false);
-                else {
-                    writer.WriteStringStart();
-                    writer.WriteStringInner("^");
-                    writer.WriteStringInner(strVal.value);
-                    writer.WriteStringEnd();
+                    return "\n";
+                else
+                {
+                    return "^" + strVal.value;
                 }
-                return;
             }
 
             var divTargetVal = obj as DivertTargetValue;
             if (divTargetVal)
             {
-                writer.WriteObjectStart();
-                writer.WriteProperty("^->", divTargetVal.value.componentsString);
-                writer.WriteObjectEnd();
-                return;
+                var dict = new Dictionary<string, object>();
+                dict["^->"] = divTargetVal.value.componentsString;
+                return dict;
             }
 
             var varPtrVal = obj as VariablePointerValue;
             if (varPtrVal)
             {
-                writer.WriteObjectStart();
-                writer.WriteProperty("^var", varPtrVal.value);
-                writer.WriteProperty("ci", varPtrVal.contextIndex);
-                writer.WriteObjectEnd();
-                return;
+                var dict = new Dictionary<string, object>();
+                dict["^var"] = varPtrVal.value;
+                dict["ci"] = varPtrVal.contextIndex;
+                return dict;
             }
 
             var glue = obj as Runtime.Glue;
             if (glue) {
-                writer.Write("<>");
-                return;
+                return "<>";
             }
 
             var controlCmd = obj as ControlCommand;
             if (controlCmd)
             {
-                writer.Write(_controlCommandNames[(int)controlCmd.commandType]);
-                return;
+                return _controlCommandNames[(int)controlCmd.commandType];
             }
 
             var nativeFunc = obj as Runtime.NativeFunctionCall;
@@ -185,8 +166,7 @@ namespace Ink.Runtime
                 // Avoid collision with ^ used to indicate a string
                 if (name == "^") name = "L^";
 
-                writer.Write(name);
-                return;
+                return name;
             }
 
 
@@ -194,62 +174,54 @@ namespace Ink.Runtime
             var varRef = obj as VariableReference;
             if (varRef)
             {
-                writer.WriteObjectStart();
+                var dict = new Dictionary<string, object>();
 
                 string readCountPath = varRef.pathStringForCount;
                 if (readCountPath != null)
                 {
-                    writer.WriteProperty("CNT?", readCountPath);
+                    dict["CNT?"] = readCountPath;
                 }
                 else
                 {
-                    writer.WriteProperty("VAR?", varRef.name);
+                    dict["VAR?"] = varRef.name;
                 }
-
-                writer.WriteObjectEnd();
-                return;
+                return dict;
             }
 
             // Variable assignment
             var varAss = obj as VariableAssignment;
             if (varAss)
             {
-                writer.WriteObjectStart();
+                var dict = new Dictionary<string, object>();
 
                 string key = varAss.isGlobal ? "VAR=" : "temp=";
-                writer.WriteProperty(key, varAss.variableName);
+                dict[key] = varAss.variableName;
 
                 // Reassignment?
                 if (!varAss.isNewDeclaration)
-                    writer.WriteProperty("re", true);
-
-                writer.WriteObjectEnd();
-
-                return;
+                    dict["re"] = true;
+                return dict;
             }
 
             // Void
             var voidObj = obj as Void;
             if (voidObj) {
-                writer.Write("void");
-                return;
+                return "void";
             }
 
             // Tag
             var tag = obj as Tag;
             if (tag)
             {
-                writer.WriteObjectStart();
-                writer.WriteProperty("#", tag.text);
-                writer.WriteObjectEnd();
-                return;
+                var dict = new Dictionary<string, object>();
+                dict["#"] = tag.text;
+                return dict;
             }
 
             // Used when serialising save state only
             var choice = obj as Choice;
             if (choice) {
-                WriteChoice(writer, choice);
-                return;
+                return WriteChoice(choice);
             }
 
             throw new System.Exception("Failed to write runtime object to JSON: " + obj);
@@ -490,12 +462,12 @@ namespace Ink.Runtime
             throw new System.Exception ("Failed to convert token to runtime object: " + token);
         }
 
-        public static void WriteRuntimeContainer(SimpleJson.Writer writer, Container container, bool withoutName = false)
+        public static object WriteRuntimeContainer(Container container, bool withoutName = false)
         {
-            writer.WriteArrayStart();
+            List<object> ret = new List<object> ();
 
             foreach (var c in container.content)
-                WriteRuntimeObject(writer, c);
+                ret.Add(WriteRuntimeObject(c));
 
             // Container is always an array [...]
             // But the final element is always either:
@@ -508,31 +480,31 @@ namespace Ink.Runtime
 
             bool hasTerminator = namedOnlyContent != null || countFlags > 0 || hasNameProperty;
 
-            if( hasTerminator )
-                writer.WriteObjectStart();
+            var dict = new Dictionary<string, object>();
+
+            if ( hasTerminator )
+            { }
 
             if ( namedOnlyContent != null ) {
                 foreach(var namedContent in namedOnlyContent) {
                     var name = namedContent.Key;
                     var namedContainer = namedContent.Value as Container;
-                    writer.WritePropertyStart(name);
-                    WriteRuntimeContainer(writer, namedContainer, withoutName:true);
-                    writer.WritePropertyEnd();
+                    dict[name] = WriteRuntimeContainer(namedContainer, withoutName:true);
                 }
             }
 
             if (countFlags > 0)
-                writer.WriteProperty("#f", countFlags);
+                dict["#f"] = countFlags;
 
             if (hasNameProperty)
-                writer.WriteProperty("#n", container.name);
+                dict["#n"] = container.name;
 
             if (hasTerminator)
-                writer.WriteObjectEnd();
+                ret.Add(dict);
             else
-                writer.WriteNull();
+                ret.Add(null);
 
-            writer.WriteArrayEnd();
+            return ret;
         }
 
         static Container JArrayToContainer(List<object> jArray)
@@ -579,15 +551,15 @@ namespace Ink.Runtime
             choice.pathStringOnChoice = jObj ["targetPath"].ToString();
             return choice;
         }
-        public static void WriteChoice(SimpleJson.Writer writer, Choice choice)
+        public static object WriteChoice(Choice choice)
         {
-            writer.WriteObjectStart();
-            writer.WriteProperty("text", choice.text);
-            writer.WriteProperty("index", choice.index);
-            writer.WriteProperty("originalChoicePath", choice.sourcePath);
-            writer.WriteProperty("originalThreadIndex", choice.originalThreadIndex);
-            writer.WriteProperty("targetPath", choice.pathStringOnChoice);
-            writer.WriteObjectEnd();
+            var dict = new Dictionary<string, object> ();
+            dict["text"] = choice.text;
+            dict["index"] = choice.index;
+            dict["originalChoicePath"] = choice.sourcePath;
+            dict["originalThreadIndex"] = choice.originalThreadIndex;
+            dict["targetPath"] = choice.pathStringOnChoice;
+            return dict;
         }
 
         static Json() 

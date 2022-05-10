@@ -224,36 +224,12 @@ namespace Ink.Runtime
             ResetState ();
         }
 
-        /// <summary>
-        /// The Story itself in JSON representation.
-        /// </summary>
         public string ToJson()
         {
-            //return ToJsonOld();
-            var writer = new SimpleJson.Writer();
-            ToJson(writer);
-            return writer.ToString();
-        }
-
-        /// <summary>
-        /// The Story itself in JSON representation.
-        /// </summary>
-        public void ToJson(Stream stream)
-        {
-            var writer = new SimpleJson.Writer(stream);
-            ToJson(writer);
-        }
-
-        void ToJson(SimpleJson.Writer writer)
-        {
-            writer.WriteObjectStart();
-
-            writer.WriteProperty("inkVersion", inkVersionCurrent);
-
-            // Main container content
-            writer.WriteProperty("root", w => Json.WriteRuntimeContainer(w, _mainContentContainer));
-
-            writer.WriteObjectEnd();
+            var dict = new Dictionary<string, object>();
+            dict["inkVersion"] = inkVersionCurrent;
+            dict["root"] = Json.WriteRuntimeContainer(_mainContentContainer);
+            return SimpleJson.Serialize(dict);
         }
             
         /// <summary>

@@ -28,12 +28,12 @@ namespace Ink.Runtime
             LoadFlowChoiceThreads((Dictionary<string, object>)jChoiceThreadsObj, story);
         }
 
-        public void WriteJson(SimpleJson.Writer writer)
+        public object WriteJson()
         {
-            writer.WriteObjectStart();
+            var dict = new Dictionary<string, object>();
 
-            writer.WriteProperty("callstack", callStack.WriteJson);
-            writer.WriteProperty("outputStream", w => Json.WriteListRuntimeObjs(w, outputStream));
+            dict["callstack"] = callStack.WriteJson();
+            dict["outputStream"] = Json.WriteListRuntimeObjs(outputStream);
 
             // choiceThreads: optional
             // Has to come BEFORE the choices themselves are written out
@@ -48,32 +48,23 @@ namespace Ink.Runtime
                     if (!hasChoiceThreads)
                     {
                         hasChoiceThreads = true;
-                        writer.WritePropertyStart("choiceThreads");
-                        writer.WriteObjectStart();
+                        dict["choiceThreads"] = new Dictionary<int, object>();
                     }
 
-                    writer.WritePropertyStart(c.originalThreadIndex);
-                    c.threadAtGeneration.WriteJson(writer);
-                    writer.WritePropertyEnd();
+                    (dict["choiceThreads"] as IDictionary<int, object>)[c.originalThreadIndex] = c.threadAtGeneration.WriteJson();
                 }
             }
 
             if (hasChoiceThreads)
             {
-                writer.WriteObjectEnd();
-                writer.WritePropertyEnd();
             }
 
+            var lst = new List<object>();
+            foreach (var c in currentChoices)
+                lst.Add(Json.WriteChoice(c));
+            dict["currentChoices"] = lst;
 
-            writer.WriteProperty("currentChoices", w => {
-                w.WriteArrayStart();
-                foreach (var c in currentChoices)
-                    Json.WriteChoice(w, c);
-                w.WriteArrayEnd();
-            });
-
-
-            writer.WriteObjectEnd();
+            return dict;
         }
 
         // Used both to load old format and current

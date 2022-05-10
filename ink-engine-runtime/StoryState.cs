@@ -31,18 +31,7 @@ namespace Ink.Runtime
         /// </summary>
         /// <returns>The save state in json format.</returns>
         public string ToJson() {
-            var writer = new SimpleJson.Writer();
-            WriteJson(writer);
-            return writer.ToString();
-        }
-
-        /// <summary>
-        /// Exports the current state to json format, in order to save the game.
-        /// For this overload you can pass in a custom stream, such as a FileStream.
-        /// </summary>
-        public void ToJson(Stream stream) {
-            var writer = new SimpleJson.Writer(stream);
-            WriteJson(writer);
+            return SimpleJson.Serialize(WriteJson() as Dictionary<string, object>);
         }
 
         /// <summary>
@@ -570,53 +559,48 @@ namespace Ink.Runtime
             counts[container.path.ToString()] = newCount;
         }
 
-        void WriteJson(SimpleJson.Writer writer)
+        object WriteJson()
         {
-            writer.WriteObjectStart();
+            var dict = new Dictionary<string, object>();
 
             // Flows
-            writer.WritePropertyStart("flows");
-            writer.WriteObjectStart();
+            dict["flows"] = new Dictionary<string, object>();
 
             // Multi-flow
             if( _namedFlows != null ) {
                 foreach(var namedFlow in _namedFlows) {
-                    writer.WriteProperty(namedFlow.Key, namedFlow.Value.WriteJson);
+                    (dict["flows"] as IDictionary<string, object>)[namedFlow.Key] = namedFlow.Value.WriteJson();
                 }
             } 
             
             // Single flow
             else {
-                writer.WriteProperty(_currentFlow.name, _currentFlow.WriteJson);
+                (dict["flows"] as IDictionary<string, object>)[_currentFlow.name] = _currentFlow.WriteJson();
             }
 
-            writer.WriteObjectEnd();
-            writer.WritePropertyEnd(); // end of flows
+            dict["currentFlowName"] = _currentFlow.name;
+            dict["variablesState"] = variablesState.WriteJson();
 
-            writer.WriteProperty("currentFlowName", _currentFlow.name);
-
-            writer.WriteProperty("variablesState", variablesState.WriteJson);
-
-            writer.WriteProperty("evalStack", w => Json.WriteListRuntimeObjs(w, evaluationStack));
+            dict["evalStack"] = Json.WriteListRuntimeObjs(evaluationStack);
 
 
             if (!divertedPointer.isNull)
-                writer.WriteProperty("currentDivertTarget", divertedPointer.path.componentsString);
+                dict["currentDivertTarget"] = divertedPointer.path.componentsString;
                 
-            writer.WriteProperty("visitCounts", w => Json.WriteIntDictionary(w, _visitCounts));
-            writer.WriteProperty("turnIndices", w => Json.WriteIntDictionary(w, _turnIndices));
+            dict["visitCounts"] = Json.WriteIntDictionary(_visitCounts);
+            dict["turnIndices"] = Json.WriteIntDictionary(_turnIndices);
 
 
-            writer.WriteProperty("turnIdx", currentTurnIndex);
-            writer.WriteProperty("storySeed", storySeed);
-            writer.WriteProperty("previousRandom", previousRandom);
+            dict["turnIdx"] = currentTurnIndex;
+            dict["storySeed"] = storySeed;
+            dict["previousRandom"] = previousRandom;
 
-            writer.WriteProperty("inkSaveVersion", kInkSaveStateVersion);
+            dict["inkSaveVersion"] = kInkSaveStateVersion;
 
             // Not using this right now, but could do in future.
-            writer.WriteProperty("inkFormatVersion", Story.inkVersionCurrent);
+            dict["inkFormatVersion"] = Story.inkVersionCurrent;
 
-            writer.WriteObjectEnd();
+            return dict;
         }
 
 

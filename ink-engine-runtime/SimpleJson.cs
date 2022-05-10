@@ -154,7 +154,12 @@ namespace Ink.Runtime
             //return new Reader (text).ToDictionary ();
         }
 
-        public class Writer
+        public static string Serialize(Dictionary<string, object> dict)
+        {
+            return JsonConvert.SerializeObject(dict);
+        }
+
+        private class Writer
         {
             public Writer()
             {

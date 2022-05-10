@@ -108,44 +108,38 @@ namespace Ink.Runtime
                 return copy;
             }
 
-            public void WriteJson(SimpleJson.Writer writer)
+            public object WriteJson()
             {
-                writer.WriteObjectStart();
-
-                // callstack
-                writer.WritePropertyStart("callstack");
-                writer.WriteArrayStart();
-                foreach (CallStack.Element el in callstack)
-                {
-                    writer.WriteObjectStart();
-                    if(!el.currentPointer.isNull) {
-                        writer.WriteProperty("cPath", el.currentPointer.container.path.componentsString);
-                        writer.WriteProperty("idx", el.currentPointer.index);
-                    }
-
-                    writer.WriteProperty("exp", el.inExpressionEvaluation);
-                    writer.WriteProperty("type", (int)el.type);
-
-                    if(el.temporaryVariables.Count > 0) {
-                        writer.WritePropertyStart("temp");
-                        Json.WriteDictionaryRuntimeObjs(writer, el.temporaryVariables);
-                        writer.WritePropertyEnd();
-                    }
-
-                    writer.WriteObjectEnd();
-                }
-                writer.WriteArrayEnd();
-                writer.WritePropertyEnd();
-
-                // threadIndex
-                writer.WriteProperty("threadIndex", threadIndex);
-
+                var dict = new Dictionary<string, object>();
+                    dict["threadIndex"] = threadIndex;
+         
                 if (!previousPointer.isNull)
                 {
-                    writer.WriteProperty("previousContentObject", previousPointer.Resolve().path.ToString());
+                    dict["previousContentObject"] = previousPointer.Resolve().path.ToString();
                 }
 
-                writer.WriteObjectEnd();
+                var elements = new List<object>();
+                foreach (CallStack.Element el in callstack)
+                {
+                    var item = new Dictionary<string, object>();
+
+                    if(!el.currentPointer.isNull) {
+                        item["cPath"] = el.currentPointer.container.path.componentsString;
+                        item["idx"] = el.currentPointer.index;
+                    }
+
+                    item["exp"] = el.inExpressionEvaluation;
+                    item["type"] = (int)el.type;
+
+                    if(el.temporaryVariables.Count > 0) {
+                        item["temp"] = Json.WriteDictionaryRuntimeObjs(el.temporaryVariables);
+                    }
+
+                    elements.Add(item);
+                }
+
+                dict["callstack"] = elements;
+                return dict;
             }
         }
 
@@ -238,30 +232,17 @@ namespace Ink.Runtime
             _startOfRoot = Pointer.StartOf(storyContext.rootContentContainer);
         }
 
-        public void WriteJson(SimpleJson.Writer w)
+        public object WriteJson()
         {
-            w.WriteObject(writer =>
+            List<object> threads = new List<object> ();
+            foreach (CallStack.Thread thread in _threads)
+                threads.Add(thread.WriteJson());
+
+            return new Dictionary<string, object>
             {
-                writer.WritePropertyStart("threads");
-                {
-                    writer.WriteArrayStart();
-
-                    foreach (CallStack.Thread thread in _threads)
-                    {
-                        thread.WriteJson(writer);
-                    }
-
-                    writer.WriteArrayEnd();
-                }
-                writer.WritePropertyEnd();
-
-                writer.WritePropertyStart("threadCounter");
-                {
-                    writer.Write(_threadCounter);
-                }
-                writer.WritePropertyEnd();
-            });
-        
+                ["threads"] = threads ,
+                ["threadCounter"] = _threadCounter,
+            };
         }
 
         public void PushThread()

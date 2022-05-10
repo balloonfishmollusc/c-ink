@@ -143,18 +143,16 @@ namespace Ink.Runtime
             }
         }
 
-        public void WriteJson(SimpleJson.Writer writer)
+        public object WriteJson()
         {
-            writer.WriteObjectStart();
+            var dict = new Dictionary<string, object> ();
             foreach (var keyVal in _globalVariables)
             {
                 var name = keyVal.Key;
                 var val = keyVal.Value;
-                writer.WritePropertyStart(name);
-                Json.WriteRuntimeObject(writer, val);
-                writer.WritePropertyEnd();
+                dict[name] = Json.WriteRuntimeObject(val);
             }
-            writer.WriteObjectEnd();
+            return dict;
         }
 
         public bool RuntimeObjectsEqual(Runtime.Object obj1, Runtime.Object obj2)
