@@ -366,12 +366,6 @@ namespace Ink.Runtime
             if (!declareNew && !contextElement.temporaryVariables.ContainsKey(name)) {
                 throw new System.Exception ("Could not find temporary variable to set: " + name);
             }
-
-            Runtime.Object oldValue;
-            if( contextElement.temporaryVariables.TryGetValue(name, out oldValue))
-            {
-                //ListValue.RetainListOriginsForAssignment(oldValue, value);
-            }
             contextElement.temporaryVariables [name] = value;
         }
 

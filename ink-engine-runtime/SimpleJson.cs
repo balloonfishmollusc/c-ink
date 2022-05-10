@@ -2,6 +2,143 @@
 using System.Text;
 using System.Collections.Generic;
 using System.IO;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+
+public class DictionaryConverter : JsonConverter
+{
+    public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer) { this.WriteValue(writer, value); }
+
+    private void WriteValue(JsonWriter writer, object value)
+    {
+        var t = JToken.FromObject(value);
+        switch (t.Type)
+        {
+            case JTokenType.Object:
+                this.WriteObject(writer, value);
+                break;
+            case JTokenType.Array:
+                this.WriteArray(writer, value);
+                break;
+            default:
+                writer.WriteValue(value);
+                break;
+        }
+    }
+
+    private void WriteObject(JsonWriter writer, object value)
+    {
+        writer.WriteStartObject();
+        var obj = value as IDictionary<string, object>;
+        foreach (var kvp in obj)
+        {
+            writer.WritePropertyName(kvp.Key);
+            this.WriteValue(writer, kvp.Value);
+        }
+        writer.WriteEndObject();
+    }
+
+    private void WriteArray(JsonWriter writer, object value)
+    {
+        writer.WriteStartArray();
+        var array = value as IEnumerable<object>;
+        foreach (var o in array)
+        {
+            this.WriteValue(writer, o);
+        }
+        writer.WriteEndArray();
+    }
+
+    public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer)
+    {
+        return ReadValue(reader);
+    }
+
+    private object ReadValue(JsonReader reader)
+    {
+        while (reader.TokenType == JsonToken.Comment)
+        {
+            if (!reader.Read()) throw new JsonSerializationException("Unexpected Token when converting IDictionary<string, object>");
+        }
+
+        switch (reader.TokenType)
+        {
+            case JsonToken.StartObject:
+                return ReadObject(reader);
+            case JsonToken.StartArray:
+                return this.ReadArray(reader);
+            case JsonToken.Integer:
+                return Convert.ToInt32(reader.Value);
+            case JsonToken.Float:
+                return Convert.ToSingle(reader.Value);
+            case JsonToken.String:
+            case JsonToken.Boolean:
+            case JsonToken.Undefined:
+            case JsonToken.Null:
+            case JsonToken.Date:
+            case JsonToken.Bytes:
+                return reader.Value;
+            default:
+                throw new JsonSerializationException
+                    (string.Format("Unexpected token when converting IDictionary<string, object>: {0}", reader.TokenType));
+        }
+    }
+
+    private object ReadArray(JsonReader reader)
+    {
+        IList<object> list = new List<object>();
+
+        while (reader.Read())
+        {
+            switch (reader.TokenType)
+            {
+                case JsonToken.Comment:
+                    break;
+                default:
+                    var v = ReadValue(reader);
+
+                    list.Add(v);
+                    break;
+                case JsonToken.EndArray:
+                    return list;
+            }
+        }
+
+        throw new JsonSerializationException("Unexpected end when reading IDictionary<string, object>");
+    }
+
+    private object ReadObject(JsonReader reader)
+    {
+        var obj = new Dictionary<string, object>();
+
+        while (reader.Read())
+        {
+            switch (reader.TokenType)
+            {
+                case JsonToken.PropertyName:
+                    var propertyName = reader.Value.ToString();
+
+                    if (!reader.Read())
+                    {
+                        throw new JsonSerializationException("Unexpected end when reading IDictionary<string, object>");
+                    }
+
+                    var v = ReadValue(reader);
+
+                    obj[propertyName] = v;
+                    break;
+                case JsonToken.Comment:
+                    break;
+                case JsonToken.EndObject:
+                    return obj;
+            }
+        }
+
+        throw new JsonSerializationException("Unexpected end when reading IDictionary<string, object>");
+    }
+
+    public override bool CanConvert(Type objectType) { return typeof(IDictionary<string, object>).IsAssignableFrom(objectType); }
+}
 
 namespace Ink.Runtime
 {
@@ -13,294 +150,9 @@ namespace Ink.Runtime
     {
         public static Dictionary<string, object> TextToDictionary (string text)
         {
-            return new Reader (text).ToDictionary ();
+            return JsonConvert.DeserializeObject<Dictionary<string, object>>(text, new DictionaryConverter());
+            //return new Reader (text).ToDictionary ();
         }
-
-        public static List<object> TextToArray(string text)
-        {
-            return new Reader(text).ToArray();
-        }
-
-        class Reader
-        {
-            public Reader (string text)
-            {
-                _text = text;
-                _offset = 0;
-
-                SkipWhitespace ();
-
-                _rootObject = ReadObject ();
-            }
-
-            public Dictionary<string, object> ToDictionary ()
-            {
-                return (Dictionary<string, object>)_rootObject;
-            }
-
-            public List<object> ToArray()
-            {
-                return (List<object>)_rootObject;
-            }
-
-            bool IsNumberChar (char c)
-            {
-                return c >= '0' && c <= '9' || c == '.' || c == '-' || c == '+' || c == 'E' || c == 'e';
-            }
-
-            bool IsFirstNumberChar(char c)
-            {
-                return c >= '0' && c <= '9' || c == '-' || c == '+';
-            }
-
-            object ReadObject ()
-            {
-                var currentChar = _text [_offset];
-
-                if( currentChar == '{' )
-                    return ReadDictionary ();
-                
-                else if (currentChar == '[')
-                    return ReadArray ();
-
-                else if (currentChar == '"')
-                    return ReadString ();
-
-                else if (IsFirstNumberChar(currentChar))
-                    return ReadNumber ();
-
-                else if (TryRead ("true"))
-                    return true;
-
-                else if (TryRead ("false"))
-                    return false;
-
-                else if (TryRead ("null"))
-                    return null;
-
-                throw new System.Exception ("Unhandled object type in JSON: "+_text.Substring (_offset, 30));
-            }
-
-            Dictionary<string, object> ReadDictionary ()
-            {
-                var dict = new Dictionary<string, object> ();
-
-                Expect ("{");
-
-                SkipWhitespace ();
-
-                // Empty dictionary?
-                if (TryRead ("}"))
-                    return dict;
-
-                do {
-
-                    SkipWhitespace ();
-
-                    // Key
-                    var key = ReadString ();
-                    Expect (key != null, "dictionary key");
-
-                    SkipWhitespace ();
-
-                    // :
-                    Expect (":");
-
-                    SkipWhitespace ();
-
-                    // Value
-                    var val = ReadObject ();
-                    Expect (val != null, "dictionary value");
-
-                    // Add to dictionary
-                    dict [key] = val;
-
-                    SkipWhitespace ();
-
-                } while ( TryRead (",") );
-
-                Expect ("}");
-
-                return dict;
-            }
-
-            List<object> ReadArray ()
-            {
-                var list = new List<object> ();
-
-                Expect ("[");
-
-                SkipWhitespace ();
-
-                // Empty list?
-                if (TryRead ("]"))
-                    return list;
-
-                do {
-
-                    SkipWhitespace ();
-
-                    // Value
-                    var val = ReadObject ();
-
-                    // Add to array
-                    list.Add (val);
-
-                    SkipWhitespace ();
-
-                } while (TryRead (","));
-
-                Expect ("]");
-
-                return list;
-            }
-
-            string ReadString ()
-            {
-                Expect ("\"");
-
-                var sb = new StringBuilder();
-
-                for (; _offset < _text.Length; _offset++) {
-                    var c = _text [_offset];
-
-                    if (c == '\\') {
-                        // Escaped character
-                        _offset++;
-                        if (_offset >= _text.Length) {
-                            throw new Exception("Unexpected EOF while reading string");
-                        }
-                        c = _text[_offset];
-                        switch (c)
-                        {
-                            case '"':
-                            case '\\':
-                            case '/': // Yes, JSON allows this to be escaped
-                                sb.Append(c);
-                                break;
-                            case 'n':
-                                sb.Append('\n');
-                                break;
-                            case 't':
-                                sb.Append('\t');
-                                break;
-                            case 'r':
-                            case 'b':
-                            case 'f':
-                                // Ignore other control characters
-                                break;
-                            case 'u':
-                                // 4-digit Unicode
-                                if (_offset + 4 >=_text.Length) {
-                                    throw new Exception("Unexpected EOF while reading string");
-                                }
-                                var digits = _text.Substring(_offset + 1, 4);
-                                int uchar;
-                                if (int.TryParse(digits, System.Globalization.NumberStyles.AllowHexSpecifier, System.Globalization.CultureInfo.InvariantCulture, out uchar)) {
-                                    sb.Append((char)uchar);
-                                    _offset += 4;
-                                } else {
-                                    throw new Exception("Invalid Unicode escape character at offset " + (_offset - 1));
-                                }
-                                break;
-                            default:
-                                // The escaped character is invalid per json spec
-                                throw new Exception("Invalid Unicode escape character at offset " + (_offset - 1));
-                        }
-                    } else if( c == '"' ) {
-                        break;
-                    } else {
-                        sb.Append(c);
-                    }
-                }
-
-                Expect ("\"");
-                return sb.ToString();
-            }
-
-            object ReadNumber ()
-            {
-                var startOffset = _offset;
-
-                bool isFloat = false;
-                for (; _offset < _text.Length; _offset++) {
-                    var c = _text [_offset];
-                    if (c == '.' || c == 'e' || c == 'E') isFloat = true;
-                    if (IsNumberChar (c))
-                        continue;
-                    else
-                        break;
-                }
-
-                string numStr = _text.Substring (startOffset, _offset - startOffset);
-
-                if (isFloat) {
-                    float f;
-                    if (float.TryParse (numStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out f)) {
-                        return f;
-                    }
-                } else {
-                    int i;
-                    if (int.TryParse (numStr, out i)) {
-                        return i;
-                    }
-                }
-
-                throw new System.Exception ("Failed to parse number value: "+numStr);
-            }
-
-            bool TryRead (string textToRead)
-            {
-                if (_offset + textToRead.Length > _text.Length)
-                    return false;
-                
-                for (int i = 0; i < textToRead.Length; i++) {
-                    if (textToRead [i] != _text [_offset + i])
-                        return false;
-                }
-
-                _offset += textToRead.Length;
-
-                return true;
-            }
-
-            void Expect (string expectedStr)
-            {
-                if (!TryRead (expectedStr))
-                    Expect (false, expectedStr);
-            }
-
-            void Expect (bool condition, string message = null)
-            {
-                if (!condition) {
-                    if (message == null) {
-                        message = "Unexpected token";
-                    } else {
-                        message = "Expected " + message;
-                    }
-                    message += " at offset " + _offset;
-
-                    throw new System.Exception (message);
-                }
-            }
-
-            void SkipWhitespace ()
-            {
-                while (_offset < _text.Length) {
-                    var c = _text [_offset];
-                    if (c == ' ' || c == '\t' || c == '\n' || c == '\r')
-                        _offset++;
-                    else
-                        break;
-                }
-            }
-
-            string _text;
-            int _offset;
-
-            object _rootObject;
-        }
-
 
         public class Writer
         {

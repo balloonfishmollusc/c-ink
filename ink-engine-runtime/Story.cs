@@ -63,7 +63,6 @@ namespace Ink.Runtime
         /// </summary>
 		public string currentText { 
             get  { 
-                IfAsyncWeCant ("call currentText since it's a work in progress");
                 return state.currentText; 
             } 
         }
@@ -74,7 +73,6 @@ namespace Ink.Runtime
         /// </summary>
         public List<string> currentTags { 
             get { 
-                IfAsyncWeCant ("call currentTags since it's a work in progress");
                 return state.currentTags; 
             } 
         }
@@ -174,7 +172,6 @@ namespace Ink.Runtime
 		public Profiler StartProfiling() {
             throw new NotImplementedException();
 
-            IfAsyncWeCant ("start profiling");
 			_profiler = new Profiler();
 			return _profiler;
 		}
@@ -265,9 +262,6 @@ namespace Ink.Runtime
         /// </summary>
         public void ResetState()
         {
-            // TODO: Could make this possible
-            IfAsyncWeCant ("ResetState");
-
             _state = new StoryState (this);
             _state.variablesState.variableChangedEvent += VariableStateDidChangeEvent;
 
@@ -289,8 +283,6 @@ namespace Ink.Runtime
         /// </summary>
         public void ResetCallstack()
         {
-            IfAsyncWeCant ("ResetCallstack");
-
             _state.ForceEnd ();
         }
 
@@ -313,7 +305,6 @@ namespace Ink.Runtime
 
         public void SwitchFlow(string flowName)
         {
-            IfAsyncWeCant("switch flow");
             if (_asyncSaving) throw new System.Exception("Story is already in background saving mode, can't switch flow to "+flowName);
 
             state.SwitchFlow_Internal(flowName);
@@ -339,7 +330,10 @@ namespace Ink.Runtime
         /// <returns>The line of text content.</returns>
         public string Continue()
         {
-            ContinueAsync(0);
+            if (!_hasValidatedExternals)
+                ValidateExternalBindings();
+
+            ContinueInternal();
             return currentText;
         }
 
@@ -355,50 +349,17 @@ namespace Ink.Runtime
             }
         }
 
-        /// <summary>
-        /// If ContinueAsync was called (with milliseconds limit > 0) then this property
-        /// will return false if the ink evaluation isn't yet finished, and you need to call 
-        /// it again in order for the Continue to fully complete.
-        /// </summary>
-        public bool asyncContinueComplete {
-            get {
-                return !_asyncContinueActive;
-            }
-        }
-
-        /// <summary>
-        /// An "asnychronous" version of Continue that only partially evaluates the ink,
-        /// with a budget of a certain time limit. It will exit ink evaluation early if
-        /// the evaluation isn't complete within the time limit, with the
-        /// asyncContinueComplete property being false.
-        /// This is useful if ink evaluation takes a long time, and you want to distribute
-        /// it over multiple game frames for smoother animation.
-        /// If you pass a limit of zero, then it will fully evaluate the ink in the same
-        /// way as calling Continue (and in fact, this exactly what Continue does internally).
-        /// </summary>
-        public void ContinueAsync (float millisecsLimitAsync)
-        {
-            if( !_hasValidatedExternals )
-                ValidateExternalBindings ();
-
-            ContinueInternal (millisecsLimitAsync);
-        }
-
-        void ContinueInternal (float millisecsLimitAsync = 0)
+        void ContinueInternal ()
         {
             if( _profiler != null )
                 _profiler.PreContinue();
             
-            var isAsyncTimeLimited = millisecsLimitAsync > 0;
-
             _recursiveContinueCount++;
 
             // Doing either:
             //  - full run through non-async (so not active and don't want to be)
             //  - Starting async run-through
-            if (!_asyncContinueActive) {
-                _asyncContinueActive = isAsyncTimeLimited;
-				
+
                 if (!canContinue) {
                     throw new Exception ("Can't continue - should check canContinue before calling Continue");
                 }
@@ -411,7 +372,7 @@ namespace Ink.Runtime
                 // for the outermost call.
                 if (_recursiveContinueCount == 1)
                     _state.variablesState.batchObservingVariableChanges = true;
-            }
+            
 
             // Start timing
             var durationStopwatch = new Stopwatch ();
@@ -430,11 +391,6 @@ namespace Ink.Runtime
                 
                 if (outputStreamEndsInNewline) 
                     break;
-
-                // Run out of async time?
-                if (_asyncContinueActive && durationStopwatch.ElapsedMilliseconds > millisecsLimitAsync) {
-                    break;
-                }
 
             } while(canContinue);
 
@@ -477,7 +433,6 @@ namespace Ink.Runtime
                 if (_recursiveContinueCount == 1)
                     _state.variablesState.batchObservingVariableChanges = false;
 
-                _asyncContinueActive = false;
                 if(onDidContinue != null) onDidContinue();
             }
 
@@ -677,8 +632,6 @@ namespace Ink.Runtime
         /// <returns>The resulting text evaluated by the ink engine, concatenated together.</returns>
         public string ContinueMaximally()
         {
-            IfAsyncWeCant ("ContinueMaximally");
-
             var sb = new StringBuilder ();
 
             while (canContinue) {
@@ -788,7 +741,6 @@ namespace Ink.Runtime
         /// <returns>The state for background thread save.</returns>
         public StoryState CopyStateForBackgroundThreadSave()
         {
-            IfAsyncWeCant("start saving on a background thread");
             if (_asyncSaving) throw new System.Exception("Story is already in background saving mode, can't call CopyStateForBackgroundThreadSave again!");
             var stateToSave = _state;
             _state = _state.CopyAndStartPatching();
@@ -1507,7 +1459,6 @@ namespace Ink.Runtime
         /// <param name="arguments">Optional set of arguments to pass, if path is to a knot that takes them.</param>
         public void ChoosePathString (string path, bool resetCallstack = true, params object [] arguments)
         {
-            IfAsyncWeCant ("call ChoosePathString right now");
             if(onChoosePathString != null) onChoosePathString(path, arguments);
             if (resetCallstack) {
                 ResetCallstack ();
@@ -1526,12 +1477,6 @@ namespace Ink.Runtime
 
             state.PassArgumentsToEvaluationStack (arguments);
             ChoosePath (new Path (path));
-        }
-
-        void IfAsyncWeCant (string activityStr)
-        {
-            if (_asyncContinueActive)
-                throw new System.Exception ("Can't " + activityStr + ". Story is in the middle of a ContinueAsync(). Make more ContinueAsync() calls or a single Continue() call beforehand.");
         }
             
         public void ChoosePath(Path p, bool incrementingTurnIndex = true)
@@ -1601,7 +1546,6 @@ namespace Ink.Runtime
         public object EvaluateFunction (string functionName, out string textOutput, params object [] arguments)
         {
             if(onEvaluateFunction != null) onEvaluateFunction(functionName, arguments);
-            IfAsyncWeCant ("evaluate a function");
 
 			if(functionName == null) {
 				throw new System.Exception ("Function is null");
@@ -1765,7 +1709,6 @@ namespace Ink.Runtime
         /// to be performed in game code when this function is called.</param>
         public void BindExternalFunctionGeneral(string funcName, ExternalFunction func, bool lookaheadSafe = true)
         {
-            IfAsyncWeCant ("bind an external function");
             Assert (!_externals.ContainsKey (funcName), "Function '" + funcName + "' has already been bound.");
             _externals [funcName] = new ExternalFunctionDef {
                 function = func,
@@ -2088,7 +2031,6 @@ namespace Ink.Runtime
         /// </summary>
         public void UnbindExternalFunction(string funcName)
         {
-            IfAsyncWeCant ("unbind an external a function");
             Assert (_externals.ContainsKey (funcName), "Function '" + funcName + "' has not been bound.");
             _externals.Remove (funcName);
         }
@@ -2177,8 +2119,6 @@ namespace Ink.Runtime
         /// <param name="observer">A delegate function to call when the variable changes.</param>
         public void ObserveVariable(string variableName, VariableObserver observer)
         {
-            IfAsyncWeCant ("observe a new variable");
-
             if (_variableObservers == null)
                 _variableObservers = new Dictionary<string, VariableObserver> ();
 
@@ -2217,8 +2157,6 @@ namespace Ink.Runtime
         /// <param name="specificVariableName">(Optional) Specific variable name to stop observing.</param>
         public void RemoveVariableObserver(VariableObserver observer = null, string specificVariableName = null)
         {
-            IfAsyncWeCant ("remove a variable observer");
-
             if (_variableObservers == null)
                 return;
 
@@ -2638,7 +2576,6 @@ namespace Ink.Runtime
 
         StoryState _state;
 
-        bool _asyncContinueActive;
         StoryState _stateSnapshotAtLastNewline = null;
         bool _sawLookaheadUnsafeFunctionAfterNewline = false;
 
