@@ -164,27 +164,6 @@ namespace Ink.Runtime
         /// Callback for when a path string is chosen
         /// </summary>
         public event Action<string, object[]> onChoosePathString;
-
-        /// <summary>
-        /// Start recording ink profiling information during calls to Continue on Story.
-        /// Return a Profiler instance that you can request a report from when you're finished.
-        /// </summary>
-		public Profiler StartProfiling() {
-            throw new NotImplementedException();
-
-			_profiler = new Profiler();
-			return _profiler;
-		}
-
-        /// <summary>
-        /// Stop recording ink profiling information during calls to Continue on Story.
-        /// To generate a report from the profiler, call 
-        /// </summary>
-		public void EndProfiling() {
-            throw new NotImplementedException();
-
-			_profiler = null;
-		}
             
         // Warning: When creating a Story using this constructor, you need to
         // call ResetState on it before use. Intended for compiler use only.
@@ -327,8 +306,8 @@ namespace Ink.Runtime
 
         void ContinueInternal ()
         {
-            if( _profiler != null )
-                _profiler.PreContinue();
+            //if( _profiler != null )
+            //    _profiler.PreContinue();
             
             _recursiveContinueCount++;
 
@@ -414,8 +393,8 @@ namespace Ink.Runtime
 
             _recursiveContinueCount--;
 
-            if( _profiler != null )
-                _profiler.PostContinue();
+            //if( _profiler != null )
+            //    _profiler.PostContinue();
 
             // Report any errors that occured during evaluation.
             // This may either have been StoryExceptions that were thrown
@@ -471,22 +450,22 @@ namespace Ink.Runtime
 
         bool ContinueSingleStep ()
         {
-            if (_profiler != null)
-                _profiler.PreStep ();
+            //if (_profiler != null)
+            //    _profiler.PreStep ();
 
             // Run main step function (walks through content)
             Step ();
 
-            if (_profiler != null)
-                _profiler.PostStep ();
+            //if (_profiler != null)
+            //    _profiler.PostStep ();
 
             // Run out of content and we have a default invisible choice that we can follow?
 			if (!canContinue && !state.callStack.elementIsEvaluateFromGame) {
                 TryFollowDefaultInvisibleChoice ();
             }
 
-            if (_profiler != null)
-                _profiler.PreSnapshot ();
+            //if (_profiler != null)
+            //    _profiler.PreSnapshot ();
 
             // Don't save/rewind during string evaluation, which is e.g. used for choices
             if (!state.inStringEvaluation) {
@@ -545,8 +524,8 @@ namespace Ink.Runtime
 
             }
 
-            if (_profiler != null)
-                _profiler.PostSnapshot ();
+            //if (_profiler != null)
+            //    _profiler.PostSnapshot ();
 
             // outputStreamEndsInNewline = false
             return false;
@@ -776,9 +755,9 @@ namespace Ink.Runtime
             }
             state.currentPointer = pointer;
 
-			if( _profiler != null ) {
-				_profiler.Step(state.callStack);
-			}
+			//if( _profiler != null ) {
+			//	_profiler.Step(state.callStack);
+			//}
 
             // Is the current content object:
             //  - Normal content
@@ -2559,7 +2538,7 @@ namespace Ink.Runtime
 
         bool _asyncSaving;
 
-        Profiler _profiler;
+        //Profiler _profiler;
 	}
 }
 
