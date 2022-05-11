@@ -1662,7 +1662,7 @@ namespace Ink.Runtime
         /// of the function will not change), then you can pass 'true'. 
         /// Usually, you want to pass 'false', especially if you want some action 
         /// to be performed in game code when this function is called.</param>
-        public void BindExternalFunctionGeneral(string funcName, ExternalFunction func, bool lookaheadSafe = true)
+        public void BindExternalFunctionGeneral(string funcName, ExternalFunction func, bool lookaheadSafe = false)
         {
             Assert (!_externals.ContainsKey (funcName), "Function '" + funcName + "' has already been bound.");
             _externals [funcName] = new ExternalFunctionDef {
