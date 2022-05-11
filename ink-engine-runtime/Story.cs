@@ -208,6 +208,7 @@ namespace Ink.Runtime
             var dict = new Dictionary<string, object>();
             dict["inkVersion"] = inkVersionCurrent;
             dict["root"] = Json.WriteRuntimeContainer(_mainContentContainer);
+            dict["listDefs"] = new Dictionary<string, object>();
             return SimpleJson.Serialize(dict);
         }
             
