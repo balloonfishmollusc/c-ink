@@ -206,6 +206,7 @@ namespace Ink.Runtime
         public string ToJson()
         {
             var dict = new Dictionary<string, object>();
+            dict["cInkVersion"] = "1.0.0";
             dict["inkVersion"] = inkVersionCurrent;
             dict["root"] = Json.WriteRuntimeContainer(_mainContentContainer);
             dict["listDefs"] = new Dictionary<string, object>();
