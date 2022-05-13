@@ -2208,31 +2208,6 @@ namespace Ink.Runtime
             return tags;
         }
 
-        /// <summary>
-        /// Useful when debugging a (very short) story, to visualise the state of the
-        /// story. Add this call as a watch and open the extended text. A left-arrow mark
-        /// will denote the current point of the story.
-        /// It's only recommended that this is used on very short debug stories, since
-        /// it can end up generate a large quantity of text otherwise.
-        /// </summary>
-        public virtual string BuildStringOfHierarchy()
-        {
-            var sb = new StringBuilder ();
-
-            mainContentContainer.BuildStringOfHierarchy (sb, 0, state.currentPointer.Resolve());
-
-            return sb.ToString ();
-        }
-
-        string BuildStringOfContainer (Container container)
-        {
-        	var sb = new StringBuilder ();
-
-            container.BuildStringOfHierarchy (sb, 0, state.currentPointer.Resolve());
-
-        	return sb.ToString();
-        }
-
 		private void NextContent()
 		{
             // Setting previousContentObject is critical for VisitChangedContainersDueToDivert
