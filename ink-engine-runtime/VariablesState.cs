@@ -22,22 +22,6 @@ namespace Ink.Runtime
             }
             set { 
                 _batchObservingVariableChanges = value;
-                if (value) {
-                    _changedVariablesForBatchObs = new HashSet<string> ();
-                } 
-
-                // Finished observing variables in a batch - now send 
-                // notifications for changed variables all in one go.
-                else {
-                    if (_changedVariablesForBatchObs != null) {
-                        foreach (var variableName in _changedVariablesForBatchObs) {
-                            var currentValue = _globalVariables [variableName];
-                            variableChangedEvent (variableName, currentValue);
-                        }
-                    }
-
-                    _changedVariablesForBatchObs = null;
-                }
             }
         }
         bool _batchObservingVariableChanges;
@@ -119,11 +103,6 @@ namespace Ink.Runtime
         {
             foreach(var namedVar in patch.globals) {
                 _globalVariables[namedVar.Key] = namedVar.Value;
-            }
-
-            if(_changedVariablesForBatchObs != null ) {
-                foreach (var name in patch.changedVariables)
-                    _changedVariablesForBatchObs.Add(name);
             }
 
             patch = null;
@@ -311,18 +290,6 @@ namespace Ink.Runtime
                 patch.SetGlobal(variableName, value);
             else
                 _globalVariables [variableName] = value;
-
-            if (variableChangedEvent != null && !value.Equals (oldValue)) {
-
-                if (batchObservingVariableChanges) {
-                    if (patch != null)
-                        patch.AddChangedVariable(variableName);
-                    else if(_changedVariablesForBatchObs != null)
-                        _changedVariablesForBatchObs.Add (variableName);
-                } else {
-                    variableChangedEvent (variableName, value);
-                }
-            }
         }
 
         // Given a variable pointer with just the name of the target known, resolve to a variable
@@ -369,7 +336,6 @@ namespace Ink.Runtime
 
         // Used for accessing temporary variables
         CallStack _callStack;
-        HashSet<string> _changedVariablesForBatchObs;
     }
 }
 

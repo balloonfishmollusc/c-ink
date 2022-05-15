@@ -5,7 +5,7 @@ namespace Ink.Runtime
     public class StatePatch
     {
         public Dictionary<string, Runtime.Object> globals { get { return _globals;  } }
-        public HashSet<string> changedVariables { get { return _changedVariables;  } }
+        //public HashSet<string> changedVariables { get { return _changedVariables;  } }
         public Dictionary<Container, int> visitCounts { get { return _visitCounts;  } }
         public Dictionary<Container, int> turnIndices { get { return _turnIndices;  } }
 
@@ -13,12 +13,12 @@ namespace Ink.Runtime
         {
             if( toCopy != null ) {
                 _globals = new Dictionary<string, Object>(toCopy._globals);
-                _changedVariables = new HashSet<string>(toCopy._changedVariables);
+                //_changedVariables = new HashSet<string>(toCopy._changedVariables);
                 _visitCounts = new Dictionary<Container, int>(toCopy._visitCounts);
                 _turnIndices = new Dictionary<Container, int>(toCopy._turnIndices);
             } else {
                 _globals = new Dictionary<string, Object>();
-                _changedVariables = new HashSet<string>();
+                //_changedVariables = new HashSet<string>();
                 _visitCounts = new Dictionary<Container, int>();
                 _turnIndices = new Dictionary<Container, int>();
             }
@@ -31,11 +31,6 @@ namespace Ink.Runtime
 
         public void SetGlobal(string name, Runtime.Object value){
             _globals[name] = value;
-        }
-
-        public void AddChangedVariable(string name)
-        {
-            _changedVariables.Add(name);
         }
 
         public bool TryGetVisitCount(Container container, out int count)
@@ -59,7 +54,7 @@ namespace Ink.Runtime
         }
 
         Dictionary<string, Runtime.Object> _globals;
-        HashSet<string> _changedVariables = new HashSet<string>();
+        //HashSet<string> _changedVariables = new HashSet<string>();
         Dictionary<Container, int> _visitCounts = new Dictionary<Container, int>();
         Dictionary<Container, int> _turnIndices = new Dictionary<Container, int>();
     }

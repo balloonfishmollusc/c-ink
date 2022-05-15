@@ -220,8 +220,6 @@ namespace Ink.Runtime
         public void ResetState()
         {
             _state = new StoryState (this);
-            _state.variablesState.variableChangedEvent += VariableStateDidChangeEvent;
-
             ResetGlobals ();
         }
 
@@ -2056,110 +2054,6 @@ namespace Ink.Runtime
                 }
             }
         }
-           
-        /// <summary>
-        /// Delegate definition for variable observation - see ObserveVariable.
-        /// </summary>
-        public delegate void VariableObserver(string variableName, object newValue);
-
-        /// <summary>
-        /// When the named global variable changes it's value, the observer will be
-        /// called to notify it of the change. Note that if the value changes multiple
-        /// times within the ink, the observer will only be called once, at the end
-        /// of the ink's evaluation. If, during the evaluation, it changes and then
-        /// changes back again to its original value, it will still be called.
-        /// Note that the observer will also be fired if the value of the variable
-        /// is changed externally to the ink, by directly setting a value in
-        /// story.variablesState.
-        /// </summary>
-        /// <param name="variableName">The name of the global variable to observe.</param>
-        /// <param name="observer">A delegate function to call when the variable changes.</param>
-        public void ObserveVariable(string variableName, VariableObserver observer)
-        {
-            if (_variableObservers == null)
-                _variableObservers = new Dictionary<string, VariableObserver> ();
-
-			if( !state.variablesState.GlobalVariableExistsWithName(variableName) ) 
-				throw new Exception("Cannot observe variable '"+variableName+"' because it wasn't declared in the ink story.");
-
-            if (_variableObservers.ContainsKey (variableName)) {
-                _variableObservers[variableName] += observer;
-            } else {
-                _variableObservers[variableName] = observer;
-            }
-        }
-
-        /// <summary>
-        /// Convenience function to allow multiple variables to be observed with the same
-        /// observer delegate function. See the singular ObserveVariable for details.
-        /// The observer will get one call for every variable that has changed.
-        /// </summary>
-        /// <param name="variableNames">The set of variables to observe.</param>
-        /// <param name="observer">The delegate function to call when any of the named variables change.</param>
-        public void ObserveVariables(IList<string> variableNames, VariableObserver observer)
-        {
-            foreach (var varName in variableNames) {
-                ObserveVariable (varName, observer);
-            }
-        }
-
-        /// <summary>
-        /// Removes the variable observer, to stop getting variable change notifications.
-        /// If you pass a specific variable name, it will stop observing that particular one. If you
-        /// pass null (or leave it blank, since it's optional), then the observer will be removed
-        /// from all variables that it's subscribed to. If you pass in a specific variable name and
-        /// null for the the observer, all observers for that variable will be removed. 
-        /// </summary>
-        /// <param name="observer">(Optional) The observer to stop observing.</param>
-        /// <param name="specificVariableName">(Optional) Specific variable name to stop observing.</param>
-        public void RemoveVariableObserver(VariableObserver observer = null, string specificVariableName = null)
-        {
-            if (_variableObservers == null)
-                return;
-
-            // Remove observer for this specific variable
-            if (specificVariableName != null) {
-                if (_variableObservers.ContainsKey (specificVariableName)) {
-                    if( observer != null) {
-                        _variableObservers [specificVariableName] -= observer;
-                        if (_variableObservers[specificVariableName] == null) {
-                            _variableObservers.Remove(specificVariableName);
-                        }
-                    }
-                    else {
-                        _variableObservers.Remove(specificVariableName);
-                    }
-                }
-            } 
-
-            // Remove observer for all variables
-            else if( observer != null) {
-                var keys = new List<string>(_variableObservers.Keys);
-                foreach (var varName in keys) {
-                    _variableObservers[varName] -= observer;
-                    if (_variableObservers[varName] == null) {
-                        _variableObservers.Remove(varName);
-                    }
-                }
-            }
-        }
-
-        void VariableStateDidChangeEvent(string variableName, Runtime.Object newValueObj)
-        {
-            if (_variableObservers == null)
-                return;
-            
-            VariableObserver observers = null;
-            if (_variableObservers.TryGetValue (variableName, out observers)) {
-
-                if (!(newValueObj is Value)) {
-                    throw new System.Exception ("Tried to get the value of a variable that isn't a standard type");
-                }
-                var val = newValueObj as Value;
-
-                observers (variableName, val.valueObject);
-            }
-        }
 
         /// <summary>
         /// Get any global tags associated with the story. These are defined as
@@ -2501,7 +2395,6 @@ namespace Ink.Runtime
             public bool lookaheadSafe;
         }
         Dictionary<string, ExternalFunctionDef> _externals;
-        Dictionary<string, VariableObserver> _variableObservers;
         bool _hasValidatedExternals;
 
         Container _temporaryEvaluationContainer;
