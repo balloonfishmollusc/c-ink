@@ -520,6 +520,18 @@ CONST c = 5
             Assert.AreEqual("5\n", story.Continue());
         }
 
+
+        [Test()]
+        public void TestPlVars()
+        {
+            var story = CompileString(@"
+VAR _pl_x = 5
+
+{_pl_x__0}
+");
+            Assert.AreEqual("5\n", story.Continue());
+        }
+
         [Test()]
         public void TestDefaultChoices()
         {

@@ -139,6 +139,27 @@ namespace Ink.Parsed
             return result;
         }
 
+        public void TryAddNewVariableDeclarationPl(VariableAssignment varDecl)
+        {
+            TryAddNewVariableDeclaration(varDecl);
+
+            var varName = varDecl.variableName;
+            if(varDecl.isGlobalDeclaration && varName.StartsWith("_pl_") && varName != "_pl_")
+            {
+                for(int i = 0; i < 8; i++)
+                {
+                    // generate new identifier
+                    var iden = new Identifier();
+                    iden.name = varName + "__" + i.ToString();
+                    iden.debugMetadata = varDecl.variableIdentifier.debugMetadata;
+                    
+                    var a = new VariableAssignment(iden, varDecl.expression);
+                    a.isGlobalDeclaration = true;
+                    TryAddNewVariableDeclaration(a);
+                }
+            }
+        }
+
         public void TryAddNewVariableDeclaration(VariableAssignment varDecl)
         {
             var varName = varDecl.variableName;

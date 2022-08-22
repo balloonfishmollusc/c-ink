@@ -28,12 +28,6 @@ namespace Ink.Parsed
                 this.expression = AddContent(assignedExpression);
         }
 
-        public VariableAssignment (Identifier identifier)
-        {
-            this.variableIdentifier = identifier;
-            // List definitions are always global
-            isGlobalDeclaration = true;
-        }
 
         public override Runtime.Object GenerateRuntimeObject ()
         {
@@ -45,7 +39,7 @@ namespace Ink.Parsed
             }
 
             if( newDeclScope )
-                newDeclScope.TryAddNewVariableDeclaration (this);
+                newDeclScope.TryAddNewVariableDeclarationPl (this);
 
             // Global declarations don't generate actual procedural
             // runtime objects, but instead add a global variable to the story itself.
